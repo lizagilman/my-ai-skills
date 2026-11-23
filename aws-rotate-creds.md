@@ -75,35 +75,40 @@ Do NOT change the region or output format — preserve existing values.
 
 ## Step 4a — Check for AWS env vars
 
-Check if `AWS_ACCESS_KEY_ID` or `AWS_SECRET_ACCESS_KEY` are set in the current shell session:
+Check the following env vars in the current shell session and in common shell config files (`~/.bashrc`, `~/.zshrc`, `~/.bash_profile`, `~/.profile`):
+
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_PROFILE`
 
 ```
-echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" && echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"
+echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}"
+echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"
+echo "AWS_PROFILE=${AWS_PROFILE}"
 ```
 
-Also search common shell config files for these variables:
-
 ```
-grep -n "AWS_ACCESS_KEY_ID\|AWS_SECRET_ACCESS_KEY" ~/.bashrc ~/.zshrc ~/.bash_profile ~/.profile 2>/dev/null
+grep -n "AWS_ACCESS_KEY_ID\|AWS_SECRET_ACCESS_KEY\|AWS_PROFILE" ~/.bashrc ~/.zshrc ~/.bash_profile ~/.profile 2>/dev/null
 ```
 
-**If neither is set anywhere:** skip this step silently.
+**If none are set anywhere:** skip this step silently.
 
-**If found in the current shell session only (not in any config file):**
-Inform the user that the env vars are set in the current shell and will override the profile until the terminal is restarted or the vars are unset. Ask if they want to unset them now:
-```
-unset AWS_ACCESS_KEY_ID && unset AWS_SECRET_ACCESS_KEY
-```
-Note: this only affects the current shell session — the profile will be used going forward.
+---
 
-**If found in a config file:**
-Show the user the exact matching lines and which files they appear in. Ask if they want the skill to update them to the new key. If they confirm:
-- Show the exact change that will be made (old line → new line) before writing
-- Update `AWS_ACCESS_KEY_ID` to the new key ID
-- Update `AWS_SECRET_ACCESS_KEY` to the new secret
-- Remind the user to run `source <file>` or open a new terminal for the changes to take effect in their current session
+**`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`:**
 
-If they decline, leave the files untouched and note in the Step 8 summary that env vars still hold the old key.
+- If set in the current shell only: inform the user they will override the profile until the terminal is restarted. Ask if they want to unset them now (`unset AWS_ACCESS_KEY_ID && unset AWS_SECRET_ACCESS_KEY`).
+- If set in a config file: show the exact matching lines and ask if the user wants the skill to update them to the new credentials. If confirmed, show the exact change (old line → new line) before writing. Remind the user to `source <file>` or open a new terminal after.
+- If the user declines: note in the Step 8 summary that env vars still hold the old key.
+
+---
+
+**`AWS_PROFILE`:**
+
+- If set and matches the profile being rotated: no action needed — tools like ROSA CLI will correctly pick up the updated credentials from the profile.
+- If set but points to a different profile: inform the user — tools like ROSA CLI will use that other profile, not the one just rotated. Ask if they want to update it.
+- If not set at all: suggest the user add `export AWS_PROFILE=<profile-name>` to their shell config so tools like ROSA CLI consistently use the right AWS profile. Ask if they want the skill to add it.
+- If the user confirms adding or updating `AWS_PROFILE`: show the exact line before writing, then update the config file. Remind the user to `source <file>` or open a new terminal after.
 
 ## Step 5 — Verify new credentials
 
@@ -157,4 +162,4 @@ Report:
 - New key ID (last 4 chars only)
 - Old key(s) deleted
 - ROSA auth status (if applicable)
-- Env var status: whether `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` were found, and whether they were updated or left unchanged (and why)
+- Env var status: whether `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_PROFILE` were found, and whether they were updated or left unchanged (and why)
